@@ -1,0 +1,15 @@
+GEM
+  remote: https://rubygems.org/
+  specs:
+    gemoji (2.1.0)
+    uea-stemmer (0.10.1)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  gemoji
+  uea-stemmer
+
+BUNDLED WITH
+   1.11.2
