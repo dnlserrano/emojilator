@@ -1,53 +1,63 @@
 require 'gemoji'
 require 'uea-stemmer'
+require 'json'
 
 module Emojilator
   class Matcher
-    include Emoji
-
-    ALIASES = {
-      "skull" => ["die", "dead"],
-    }
-
     def find(word)
-      emoji = emoji_for(word)
-      return emoji unless emoji.nil?
+      e = find_by_alias(word)
+      return e unless e.nil?
 
-      name = name_for(word)
-      return nil if name.nil?
-
-      emoji = emoji_for(name)
-      emoji ? "#{emoji} " : nil
+      e = find_by_alias(stem(word))
+      e ? "#{e} " : nil
     end
 
     private
-    def name_for(word)
-      stem = stem_for(word)
-
-      ALIASES.each do |name, aliases|
-        if aliases.include?(stem) && name_exists_for_stem?(name)
-          return name
-        end
-      end
-
-      nil
-    end
-
-    def stem_for(word)
+    def stem(word)
       stemmer.stem(word)
     end
 
-    def emoji_for(name)
-      found = find_by_alias(name)
+    def find_by_alias(name)
+      found = emoji_finder.find_by_alias(name)
       found ? found.raw : nil
     end
 
-    def name_exists_for_stem?(stem)
+    def name_exists_stem?(stem)
       names_index.keys.include?(stem)
     end
 
     def stemmer
       @stemmer ||= UEAStemmer.new
+    end
+
+    def emoji_finder
+      @emoji_finder ||= begin
+        load_aliases
+        Emoji
+      end
+    end
+
+    def load_aliases
+      emoji_aliases.each do |original, aliases|
+        emoji = Emoji.find_by_alias(original)
+
+        Emoji.edit_emoji(emoji) do |char|
+          aliases.each do |a|
+            char.add_alias(a)
+          end
+        end
+      end
+    end
+
+    def emoji_aliases
+      JSON.parse(File.read(file_name))
+    rescue
+      puts "Error loading JSON file containing emoji aliases: #{file_name}"
+      {}
+    end
+
+    def file_name
+      @file_name ||= (ENV['EMOJI_ALIASES_FILE'] || 'emoji_aliases.json')
     end
   end
 end
